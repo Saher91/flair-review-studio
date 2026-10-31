@@ -66,10 +66,10 @@ function doPost(event) {
     }
     if (rating === "" && !note) throw new Error("The result has no rating or note.");
 
-    lock = LockService.getScriptLock();
-    lock.waitLock(10000);
-
     const sheet = setupReviewSheet_();
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+
     const lastRow = sheet.getLastRow();
     let targetRow = 0;
     if (lastRow > 1) {

@@ -9,9 +9,11 @@ This folder is a static-site package for hosting the review app on GitHub Pages.
 3. Save, select `setupReviewSheet`, and run it once. Approve the requested Google Sheets permission.
 4. Choose **Deploy → New deployment → Web app**. Set **Execute as** to yourself and access to **Anyone**. Deploy and copy the URL ending in `/exec`.
 5. Paste that URL into `SHEET_URL` in `review-config.js`.
-6. Open `index.html` locally and submit a test review before publishing. The browser cannot read the response from Google's cross-origin endpoint, so confirm the test row appears in the sheet.
+6. Open `index.html` locally and submit a test review before publishing. Confirm the test row appears in the sheet's **Review Results** tab.
 
-The app sends a case result when it is rated and sends the saved results again when **Finish** is clicked. The Apps Script updates the row for the same reviewer and case instead of adding a duplicate. The app also downloads a CSV backup.
+For an existing deployment, paste an updated `apps-script/Code.gs` into the sheet's Apps Script editor, then select **Deploy → Manage deployments**, edit the web-app deployment, choose **New version**, and click **Deploy**. The existing `/exec` URL stays the same.
+
+The app sends a case result when it is rated or a note changes. Requests are serialized, retried, and checked against the Apps Script JSON response; the note status reports a confirmed save or the error, and **Save comment now** retries manually. The Apps Script updates the row for the same reviewer and case instead of adding a duplicate. **Finish** also resends saved results and downloads a CSV backup.
 
 The Apps Script web app accepts public POST requests. Do not put patient identifiers, confidential notes, or other sensitive information in review notes. Monitor the results sheet for unwanted submissions.
 
