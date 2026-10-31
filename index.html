@@ -350,7 +350,7 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
           <span class="rating-instruction">Click a number or use your keyboard. The next unrated case opens automatically.</span>
         </div>
       </div>      <div class="note">
-        <label for="noteInput">Case annotations <span>Clinical observations · autosaved locally</span></label>
+        <label for="noteInput">Case annotations <span>Autosaves on this device and syncs to the results sheet</span></label>
         <div class="note-tools" aria-label="Quick annotation templates">
           <span class="note-tools-label">Quick insert</span>
           <button type="button" class="annotation-chip" data-template="Appearance: ">Appearance</button>
@@ -360,7 +360,7 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
           <button type="button" class="annotation-chip" data-template="Image quality: ">Image quality</button>
         </div>
         <textarea id="noteInput" rows="5" maxlength="2000" placeholder="Document image observations, tumor appearance, location, margins, contour accuracy, or questions for follow-up..."></textarea>
-        <div class="note-meta"><span id="noteSaveState" aria-live="polite">Notes autosave as you type</span><span id="noteCount">0 / 2000</span></div>
+        <div class="note-meta"><span id="noteSaveState" aria-live="polite">Notes autosave as you type</span><button type="button" class="linkish" id="saveNote">Save comment now</button><span id="noteCount">0 / 2000</span></div>
       </div>
       <div class="state-line">
         <span class="pill" id="statePill">Pending</span>
@@ -492,7 +492,15 @@ function ensureReviewerName() {
 }
 
 function loadLocal() { try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}") || {}; } catch (e) { return {}; } }
-function saveLocal() { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(mine)); } catch (e) {} }
+function saveLocal() {
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(mine));
+    return true;
+  } catch (error) {
+    console.error("Could not save review locally", error);
+    return false;
+  }
+}
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
 function fmtTime(iso) { if (!iso) return ""; const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }); }
 function cap(d) { return d.charAt(0) + d.slice(1).toLowerCase(); }
@@ -581,7 +589,7 @@ function renderCase(keepNote) {
   if (d === "PENDING") pill.removeAttribute("data-d"); else pill.dataset.d = "RATED";
   $("clear").hidden = d === "PENDING";
   if (!keepNote) $("noteInput").value = rec.note || "";
-  updateNoteMeta(rec.note ? "Saved locally" : "Notes autosave as you type");
+  updateNoteMeta(rec.note ? "Saved on this device" : "Notes autosave as you type");
   $("stateMeta").textContent = rec.decision ? "Saved " + fmtTime(rec.at) : "Choose a score from 1 to 10";
   $("prev").disabled = current === 0; $("next").disabled = current === CASES.length - 1;
 }
@@ -614,18 +622,42 @@ function renderSummary() {
 function renderAll() { renderTally(); renderCase(document.activeElement === $("noteInput")); if (!$("viewSummary").hidden) renderSummary(); }
 
 /* ---------- saving ---------- */
+const pendingSheetSaves = new Map();
 function sendToSheet(caseId) {
-  if (!SHEET_URL) return;
+  if (!SHEET_URL) {
+    if (CASES[current] && CASES[current].id === caseId) updateNoteMeta("Sheet is not configured; saved on this device only");
+    return Promise.resolve(false);
+  }
   const i = CASES.findIndex(c => c.id === caseId), r = mine[caseId] || {};
+  const savedAt = r.at || new Date().toISOString();
   const body = JSON.stringify({ reviewer: reviewer, case_number: i + 1, case_id: caseId,
-                                rating: r.decision || "", note: r.note || "", at: r.at || new Date().toISOString() });
-  // no-cors: the sheet receives the row; the browser cannot read Google's reply.
-  return fetch(SHEET_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body, keepalive: true })
-    .then(() => true)
-    .catch(error => { console.error("Results-sheet submission failed", error); toast("Could not send this result. It remains saved in this browser."); return false; });
+                                rating: r.decision || "", note: r.note || "", at: savedAt });
+  const previous = pendingSheetSaves.get(caseId) || Promise.resolve();
+  const request = previous.catch(() => false).then(() =>
+    fetch(SHEET_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body, keepalive: true })
+  ).then(() => {
+    if (CASES[current] && CASES[current].id === caseId && mine[caseId] && mine[caseId].at === savedAt) {
+      updateNoteMeta("Sent to sheet · verify in “Review Results”");
+    }
+    return true;
+  }).catch(error => {
+    console.error("Results-sheet submission failed", error);
+    if (CASES[current] && CASES[current].id === caseId) updateNoteMeta("Sheet send failed; saved here. Click Save comment now to retry.");
+    return false;
+  }).finally(() => {
+    if (pendingSheetSaves.get(caseId) === request) pendingSheetSaves.delete(caseId);
+  });
+  pendingSheetSaves.set(caseId, request);
+  return request;
 }
 
-function persist(caseId) { saveLocal(); sendToSheet(caseId); }
+function persist(caseId) {
+  if (!saveLocal()) {
+    if (CASES[current] && CASES[current].id === caseId) updateNoteMeta("Could not save on this device; copy your note before leaving.");
+    return Promise.resolve(false);
+  }
+  return sendToSheet(caseId);
+}
 
 function decide(score) {
   if (!ensureReviewerName()) return;
@@ -651,9 +683,25 @@ function clearDecision() {
 }
 
 let noteSaveTimer;
+let dirtyNotes = new Set();
 function updateNoteMeta(status) {
   $("noteCount").textContent = $("noteInput").value.length + " / 2000";
   if (status) $("noteSaveState").textContent = status;
+}
+function updateNoteDraft() {
+  const caseId = CASES[current].id, rec = mine[caseId] || {};
+  const note = $("noteInput").value.trim();
+  if ((rec.note || "") === note) return caseId;
+  dirtyNotes.add(caseId);
+  if (!note && !rec.decision) delete mine[caseId];
+  else mine[caseId] = Object.assign({}, rec, { note, at: new Date().toISOString() });
+  return caseId;
+}
+function scheduleNoteSave() {
+  const caseId = updateNoteDraft();
+  updateNoteMeta("Saving on this device…");
+  clearTimeout(noteSaveTimer);
+  noteSaveTimer = setTimeout(() => { commitNoteIfChanged(true, caseId); }, 600);
 }
 function insertNoteTemplate(template) {
   const input = $("noteInput"), start = input.selectionStart, end = input.selectionEnd;
@@ -662,19 +710,25 @@ function insertNoteTemplate(template) {
   input.value = input.value.slice(0, start) + addition + input.value.slice(end);
   const caret = start + addition.length;
   input.focus(); input.setSelectionRange(caret, caret);
-  updateNoteMeta("Unsaved changes");
-  clearTimeout(noteSaveTimer);
-  noteSaveTimer = setTimeout(() => { commitNoteIfChanged(); updateNoteMeta("Saved locally"); }, 350);
+  scheduleNoteSave();
 }
-function commitNoteIfChanged() {
+function commitNoteIfChanged(forceSend = false, caseId = CASES[current].id) {
   clearTimeout(noteSaveTimer);
-  const c = CASES[current], rec = mine[c.id] || {};
-  const note = $("noteInput").value.trim();
-  if ((rec.note || "") === note) return;
-  if (!note && !rec.decision) delete mine[c.id];
-  else mine[c.id] = Object.assign({}, rec, { note, at: new Date().toISOString() });
-  persist(c.id);
-  updateNoteMeta(note ? "Saved locally" : "Note cleared");
+  noteSaveTimer = null;
+  if (CASES[current] && CASES[current].id === caseId) updateNoteDraft();
+  const changed = dirtyNotes.delete(caseId);
+  if (changed && !saveLocal()) {
+    if (CASES[current] && CASES[current].id === caseId) updateNoteMeta("Could not save on this device; copy your note before leaving.");
+    return Promise.resolve(false);
+  }
+  if (!changed && !forceSend) return Promise.resolve(true);
+  const rec = mine[caseId] || {};
+  if (!rec.decision && !rec.note) {
+    if (CASES[current] && CASES[current].id === caseId) updateNoteMeta("Note cleared on this device");
+    return Promise.resolve(true);
+  }
+  if (CASES[current] && CASES[current].id === caseId) updateNoteMeta("Sending to shared sheet…");
+  return sendToSheet(caseId);
 }
 
 /* ---------- navigation and export ---------- */
@@ -715,7 +769,7 @@ function downloadCsv() {
 let finishArmed = false;
 async function finish() {
   if (!ensureReviewerName()) return;
-  commitNoteIfChanged();
+  await commitNoteIfChanged(true);
 
   const pending = CASES.filter(c => dOf(c.id) === "PENDING").length;
   if (pending && !finishArmed) {
@@ -767,11 +821,14 @@ $("clear").addEventListener("click", clearDecision);
 $("prev").addEventListener("click", () => go(current - 1));
 $("next").addEventListener("click", () => go(current + 1));
 $("noteInput").addEventListener("input", () => {
-  updateNoteMeta("Saving…");
-  clearTimeout(noteSaveTimer);
-  noteSaveTimer = setTimeout(() => { commitNoteIfChanged(); updateNoteMeta("Saved locally"); }, 350);
+  scheduleNoteSave();
 });
 $("noteInput").addEventListener("blur", commitNoteIfChanged);
+ $("saveNote").addEventListener("click", async () => {
+  if (!ensureReviewerName()) return;
+  const sent = await commitNoteIfChanged(true);
+  if (sent) toast("Comment sent to the shared sheet. Check the “Review Results” tab.");
+});
 document.querySelectorAll(".annotation-chip").forEach(button => button.addEventListener("click", () => insertNoteTemplate(button.dataset.template)));
 $("tabReview").addEventListener("click", () => show("review"));
 $("tabSummary").addEventListener("click", () => show("summary"));
