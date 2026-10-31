@@ -188,6 +188,7 @@ button, textarea { font: inherit; color: inherit; }
 .case-head h2 { margin: 0; font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: var(--step-3); line-height: 1; letter-spacing: .005em; }
 .case-head .id { color: var(--muted); font-size: var(--step--1); }
 .case-head .nav { margin-left: auto; display: flex; gap: 6px; }
+.case-nav-bottom { display: flex; justify-content: space-between; gap: 6px; }
 .btn-ghost { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: var(--step--1); font-weight: 600; }
 .btn-ghost:hover { border-color: var(--muted); }
 .btn-ghost:disabled { opacity: .4; cursor: default; }
@@ -328,6 +329,10 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
       </div>
     </div>
     <div class="films" id="films"></div>
+    <nav class="nav case-nav-bottom" aria-label="Case navigation below images">
+      <button class="btn-ghost" id="prevBelow" type="button">← Previous</button>
+      <button class="btn-ghost" id="nextBelow" type="button">Next →</button>
+    </nav>
     <div class="decide">
       <div class="rating-wrap">
         <div class="rating-title">Your rating <span>1 = lowest · 10 = highest</span></div>
@@ -347,7 +352,7 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
           <span><i class="rating-dot low"></i>1–4 Lower</span>
           <span><i class="rating-dot mid"></i>5 Midpoint</span>
           <span><i class="rating-dot high"></i>6–10 Higher</span>
-          <span class="rating-instruction">Click a number or use your keyboard. The next unrated case opens automatically.</span>
+          <span class="rating-instruction">Click a number or use your keyboard to rate this case.</span>
         </div>
       </div>      <div class="note">
         <label for="noteInput">Case annotations <span>Autosaves on this device and syncs to the results sheet</span></label>
@@ -590,7 +595,8 @@ function renderCase(keepNote) {
   if (!keepNote) $("noteInput").value = rec.note || "";
   updateNoteMeta(rec.note ? "Saved on this device" : "Notes autosave as you type");
   $("stateMeta").textContent = rec.decision ? "Saved " + fmtTime(rec.at) : "Choose a score from 1 to 10";
-  $("prev").disabled = current === 0; $("next").disabled = current === CASES.length - 1;
+  $("prev").disabled = current === 0; $("prevBelow").disabled = current === 0;
+  $("next").disabled = current === CASES.length - 1; $("nextBelow").disabled = current === CASES.length - 1;
 }
 
 function renderSummary() {
@@ -842,6 +848,8 @@ document.querySelectorAll(".rating-button").forEach(button => button.addEventLis
 $("clear").addEventListener("click", clearDecision);
 $("prev").addEventListener("click", () => go(current - 1));
 $("next").addEventListener("click", () => go(current + 1));
+$("prevBelow").addEventListener("click", () => go(current - 1));
+$("nextBelow").addEventListener("click", () => go(current + 1));
 $("noteInput").addEventListener("input", () => {
   scheduleNoteSave();
 });
