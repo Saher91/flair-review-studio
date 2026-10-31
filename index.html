@@ -962,4 +962,18 @@ body { color:var(--text);background-color:var(--bg);background-image:radial-grad
   --pending:#6e7f7c; --film:#000; --focus:#9be3d8; --radius:10px;
 }
 body { color:var(--text); background-color:var(--bg); background-image:radial-gradient(ellipse at 82% -8%,rgba(82,182,168,.16),transparent 38%); }
+</style>
+<style id="mobile-review-layout">
+@media (max-width:650px) {
+  .case { grid-row:1; }
+  .map { grid-row:2; }
+  .films { grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:start; }
+  .films figure:nth-child(3) { grid-column:1/-1;width:min(100%,240px);justify-self:center; }
+  .films .film { aspect-ratio:1!important; }
+  .annotation-chip { min-height:40px; }
+  .note-meta { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center; }
+  .note-meta #noteSaveState { grid-column:1/-1;overflow-wrap:anywhere; }
+  .note-meta #saveNote { grid-column:1;justify-self:start;min-height:44px; }
+  .note-meta #noteCount { grid-column:2;justify-self:end; }
+}
 </style></body></html>

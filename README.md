@@ -30,4 +30,4 @@ The original review HTML is over GitHub's 100 MB per-file limit. This package sp
 
 Reviewers must enter a name before they can rate or annotate. Notes save to the browser while typing and sync to the configured sheet after typing pauses; leaving the note field or clicking **Save comment now** sends it immediately. The note status indicates when a request was sent. Open the sheet's **Review Results** tab to verify that it arrived. **Finish** downloads a CSV copy and resubmits the saved results.
 
-The review interface uses a fixed dark navy theme (#19273D) and does not follow a reviewer's light-system preference.
+The review interface uses a fixed dark navy theme (#19273D), adapts to phone-sized screens, and does not follow a reviewer's light-system preference.
