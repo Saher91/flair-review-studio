@@ -366,7 +366,6 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
         <span class="pill" id="statePill">Pending</span>
         <span id="stateMeta"></span>
         <button class="linkish" id="clear" hidden>Clear rating</button>
-        <label class="auto"><input type="checkbox" id="autoNext" checked> Go to next case after deciding</label>
       </div>
     </div>
   </section>
@@ -691,7 +690,6 @@ function decide(score) {
   persist(c.id);
   renderTally(); renderCase(true);
   toast("Case " + (current + 1) + ": rated " + score + " / 10");
-  if ($("autoNext").checked) setTimeout(() => go(nextPendingFrom(current)), 280);
 }
 function clearDecision() {
   const c = CASES[current];
