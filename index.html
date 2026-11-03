@@ -331,7 +331,6 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
     <section class="studio-shell" aria-label="MRI visualization workspace">
       <div class="studio-intro">
         <div><div class="studio-eyebrow">RADIOLOGY REVIEW WORKSPACE</div><h3>Three-image review studio</h3><p>Compare the three source images side by side. All adjustments are visual only; original MRI data stays unchanged.</p></div>
-        <div class="mode-switch" role="group" aria-label="Viewer layout"><button id="modeGrid" type="button" aria-pressed="true">▦ Three + batch</button><button id="modeFocus" type="button" aria-pressed="false">▣ Three only</button></div>
       </div>
       <div class="film-head"><div><h4>Three-image comparison</h4><span>Original FLAIR · Generated MRI · Generated + ROI — click any image to inspect</span></div><div class="film-head-actions"><span class="case-image-count">3 source views</span><button type="button" id="compareOpen" class="compare-open">⛶ Full-screen comparison</button></div></div>
       <div class="films" id="films"></div>
@@ -351,11 +350,6 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
         </div>
       </div>
       <div class="preset-line" role="group" aria-label="Display presets"><span>Quick views</span><button type="button" data-preset="normal">Original display</button><button type="button" data-preset="bright">Brighter</button><button type="button" data-preset="contrast">Higher contrast</button><span class="preset-tip">Reset returns to original brightness and orientation</span></div>
-      <div class="viewer-options">
-        <label class="setting-check"><input id="showContours" type="checkbox" checked> Include ROI image in batch previews</label>
-        <label class="setting-check"><input id="syncImages" type="checkbox" checked> Apply adjustments to batch previews</label>
-        <span class="view-note">View only · ratings are independent of display settings</span>
-      </div>
     </section>
     <div class="decide">
       <div class="rating-wrap">
@@ -401,12 +395,6 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
         <button class="btn-ghost" id="nextBelow" type="button">Next →</button>
       </nav>
     </div>
-      <div id="batchArea" class="batch-area">
-        <div class="batch-head"><div><h4>Batch grid · adjacent cases</h4><p>Browse every case in sets. Select a case to rate it; each tile shows original, generated and ROI images.</p></div>
-          <label for="batchSize">Cases per page <select id="batchSize"><option value="6">6</option><option value="9" selected>9</option><option value="12">12</option></select></label></div>
-        <div class="batch-grid" id="batchGrid" aria-label="Batch images from nearby cases"></div>
-        <div class="batch-footer"><span id="batchRange" aria-live="polite"></span><div><button id="batchPrev" type="button">← Previous batch</button><button id="batchNext" type="button">Next batch →</button></div></div>
-      </div>
   </section>
 </main>
 
@@ -521,7 +509,7 @@ let current = 0, filter = "ALL";
 
 /* Visual inspection preferences are separate from case ratings and never exported. */
 const VIEWER_KEY = LOCAL_KEY + '-viewer-studio-v3';
-const DEFAULT_VIEWER = Object.freeze({ brightness:100, contrast:100, zoom:100, rotation:0, flip:false, invert:false, sync:true, contours:true, mode:'grid', batchSize:9, source:2 });
+const DEFAULT_VIEWER = Object.freeze({ brightness:100, contrast:100, zoom:100, rotation:0, flip:false, invert:false });
 const PANEL_BASE_ROTATIONS = Object.freeze([90, 90, 90]);
 // Start every visit in the same unbiased, three-image comparison mode.
 // Only reviews, reviewer identity, and notes persist across visits;
@@ -530,7 +518,7 @@ function viewerSettings() {
   return {...DEFAULT_VIEWER};
 }
 let viewer = viewerSettings();
-let filmPans = [{x:0,y:0},{x:0,y:0},{x:0,y:0}], inspectPan={x:0,y:0}, inspectPanel=2, inspectCase=0, batchStart=0;
+let filmPans = [{x:0,y:0},{x:0,y:0},{x:0,y:0}], inspectPan={x:0,y:0}, inspectPanel=2, inspectCase=0;
 const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
 function storeViewer(){ try { localStorage.setItem(VIEWER_KEY, JSON.stringify(viewer)); } catch(e){} }
 function sourceName(j){return ['Original FLAIR','Generated MRI','Generated + ROI overlay'][j];}
@@ -540,8 +528,6 @@ function viewportTransform(pan,zoom,panel=0){return `translate(${pan.x}px, ${pan
 function applyViewer(){
   $('ctlBrightness').value=viewer.brightness; $('ctlContrast').value=viewer.contrast; $('ctlZoom').value=viewer.zoom;
   $('brightnessValue').textContent=viewer.brightness+'%'; $('contrastValue').textContent=viewer.contrast+'%'; $('zoomValue').textContent=viewer.zoom+'%';
-  $('showContours').checked=viewer.contours; $('syncImages').checked=viewer.sync;
-  $('batchSize').value=viewer.batchSize;
   $('invertImage').setAttribute('aria-pressed',String(viewer.invert));
   $('flipImage').setAttribute('aria-pressed',String(viewer.flip));
   $('inspectImage').style.filter=filterCSS(); $('inspectImage').style.transform=viewportTransform(inspectPan,viewer.zoom,inspectPanel);
@@ -556,56 +542,14 @@ function applyViewer(){
     img.style.filter=filterCSS();
     img.style.transform=viewportTransform({x:0,y:0},viewer.zoom,j);
   });
-  $('batchGrid').querySelectorAll('.batch-image img').forEach(img=>{
-    const panel=Number(img.dataset.panel || 0);
-    img.style.filter=viewer.sync ? filterCSS() : 'none';
-    img.style.transform=viewer.sync ? `rotate(${panelRotation(panel)}deg) scaleX(${viewer.flip ? -1 : 1})` : 'none';
-  });
-  $('batchArea').hidden=viewer.mode==='focus';
-  $('modeGrid').setAttribute('aria-pressed',String(viewer.mode==='grid'));
-  $('modeFocus').setAttribute('aria-pressed',String(viewer.mode==='focus'));
   storeViewer();
 }
 function setZoom(v){viewer.zoom=clamp(Math.round(v/10)*10,100,400);applyViewer();}
 function rotateViewer(delta){ viewer.rotation=(viewer.rotation+delta+360)%360; applyViewer(); }
 function resetVisualization(){
-  const mode=viewer.mode,batchSize=viewer.batchSize;
-  viewer={...DEFAULT_VIEWER,mode,batchSize}; filmPans=[{x:0,y:0},{x:0,y:0},{x:0,y:0}];inspectPan={x:0,y:0};
-  renderStudioCase(); applyViewer();
+  viewer={...DEFAULT_VIEWER}; filmPans=[{x:0,y:0},{x:0,y:0},{x:0,y:0}];inspectPan.x=0;inspectPan.y=0;
+  applyViewer();
   toast('Visualization reset · source images unchanged');
-}
-function displaySource(c, panel){return c.imgs[panel===2&&!viewer.contours ? 1 : panel];}
-function renderStudioCase(){
-  if(current<batchStart || current>=batchStart+viewer.batchSize) batchStart=Math.floor(current/viewer.batchSize)*viewer.batchSize;
-  renderBatch(); applyViewer();
-}
-function renderBatch(){
-  const grid=$('batchGrid'); grid.replaceChildren();
-  const last=Math.min(CASES.length,batchStart+viewer.batchSize);
-  const fragment=document.createDocumentFragment();
-  for(let i=batchStart;i<last;i++){
-    const c=CASES[i], rated=dOf(c.id)!=='PENDING';
-    const tile=document.createElement('article');tile.className='batch-card';
-    if(i===current) tile.classList.add('is-current');
-    const title=document.createElement('div');title.className='batch-card-head';
-    const pick=document.createElement('button');pick.type='button';pick.className='batch-pick';
-    pick.textContent='Case '+(i+1);pick.setAttribute('aria-label','Open case '+(i+1));pick.addEventListener('click',()=>go(i));
-    const status=document.createElement('span');status.className='batch-status';status.textContent=rated?'Reviewed':'Not rated';
-    title.append(pick,status);
-    const images=document.createElement('div');images.className='batch-images';
-    images.style.gridTemplateColumns=viewer.contours ? 'repeat(3,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))';
-    for(let j=0;j<(viewer.contours?3:2);j++){
-      const imBtn=document.createElement('button');imBtn.type='button';imBtn.className='batch-image';
-      imBtn.title='Inspect '+sourceName(j)+' · case '+(i+1);
-      const im=document.createElement('img');im.src=displaySource(c,j);im.loading='lazy';im.decoding='async';im.alt=sourceName(j)+' of case '+(i+1);im.dataset.panel=String(j);
-      const lab=document.createElement('small');lab.textContent=['BASE','SYN','ROI'][j];
-      imBtn.append(im,lab);imBtn.addEventListener('click',()=>openZoom(j,i));images.appendChild(imBtn);
-    }
-    tile.append(title,images);fragment.appendChild(tile);
-  }
-  grid.appendChild(fragment);
-  $('batchRange').textContent=`Showing ${batchStart+1}–${last} of ${CASES.length.toLocaleString()} cases · three images each`;
-  $('batchPrev').disabled=batchStart===0;$('batchNext').disabled=last===CASES.length;
 }
 function renderInspector(){
   const caseObj=CASES[inspectCase];
@@ -670,13 +614,6 @@ function setupStudio(){
   $('flipImage').addEventListener('click',()=>{viewer.flip=!viewer.flip;applyViewer();});
   $('invertImage').addEventListener('click',()=>{viewer.invert=!viewer.invert;applyViewer();});
   $('resetImage').addEventListener('click',resetVisualization);
-  $('showContours').addEventListener('change',e=>{viewer.contours=e.target.checked;renderBatch();if($('zoom').open)renderInspector();applyViewer();});
-  $('syncImages').addEventListener('change',e=>{viewer.sync=e.target.checked;applyViewer();});
-  $('modeGrid').addEventListener('click',()=>{viewer.mode='grid';applyViewer();});
-  $('modeFocus').addEventListener('click',()=>{viewer.mode='focus';applyViewer();});
-  $('batchSize').addEventListener('change',e=>{viewer.batchSize=Number(e.target.value);batchStart=Math.floor(current/viewer.batchSize)*viewer.batchSize;renderBatch();applyViewer();});
-  $('batchPrev').addEventListener('click',()=>{batchStart=Math.max(0,batchStart-viewer.batchSize);renderBatch();});
-  $('batchNext').addEventListener('click',()=>{batchStart=Math.min(Math.floor((CASES.length-1)/viewer.batchSize)*viewer.batchSize,batchStart+viewer.batchSize);renderBatch();});
   $('inspectTabs').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{inspectPanel=Number(b.dataset.panel);inspectPan.x=0;inspectPan.y=0;renderInspector();}));
   $('inspectMinus').addEventListener('click',()=>setZoom(viewer.zoom-20));
   $('inspectPlus').addEventListener('click',()=>setZoom(viewer.zoom+20));
@@ -822,7 +759,7 @@ function renderCase(keepNote) {
       f.append(btn, fc); films.appendChild(f);
     });
   }
-  renderStudioCase();
+  applyViewer();
   document.querySelectorAll(".rating-button").forEach(button => button.setAttribute("aria-pressed", Number(button.dataset.score) === d));
 
 
@@ -1323,7 +1260,7 @@ body { color:var(--text); background-color:var(--bg); background-image:radial-gr
 </style>
 
 <style id="flair-three-image-refinements">
-/* Primary workflow: all three images first, ratings second, batch library last. */
+/* Primary workflow: three source images, visualization controls, then ratings. */
 .studio-shell{padding:17px 18px;gap:13px;box-shadow:0 10px 28px rgba(0,0,0,.13);background:linear-gradient(155deg,rgba(31,51,76,.77),rgba(15,26,42,.96))}
 .studio-intro{padding-bottom:12px;border-bottom:1px solid rgba(142,168,199,.14)}
 .studio-intro h3{font-size:1.3rem}
