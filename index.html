@@ -328,7 +328,35 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
         <button class="btn-ghost" id="next">Next →</button>
       </div>
     </div>
-    <div class="films" id="films"></div>
+    <section class="studio-shell" aria-label="MRI visualization workspace">
+      <div class="studio-intro">
+        <div><div class="studio-eyebrow">RADIOLOGY REVIEW WORKSPACE</div><h3>Three-image review studio</h3><p>Compare the three source images side by side. All adjustments are visual only; original MRI data stays unchanged.</p></div>
+        <div class="mode-switch" role="group" aria-label="Viewer layout"><button id="modeGrid" type="button" aria-pressed="true">▦ Three + batch</button><button id="modeFocus" type="button" aria-pressed="false">▣ Three only</button></div>
+      </div>
+      <div class="film-head"><div><h4>Three-image comparison</h4><span>Original FLAIR · Generated MRI · Generated + ROI — click any image to inspect</span></div><div class="film-head-actions"><span class="case-image-count">3 source views</span><button type="button" id="compareOpen" class="compare-open">⛶ Full-screen comparison</button></div></div>
+      <div class="films" id="films"></div>
+      <div class="tool-heading"><div><strong>Visualization controls</strong><span>Changes apply to the three images above · drag to pan when zoomed</span></div><span class="visual-only">Display-only adjustments</span></div>
+      <div class="viewer-toolbar">
+        <div class="slider-control"><label for="ctlBrightness">Brightness <output id="brightnessValue" for="ctlBrightness">100%</output></label><input type="range" id="ctlBrightness" min="40" max="200" value="100" step="5"></div>
+        <div class="slider-control"><label for="ctlContrast">Contrast <output id="contrastValue" for="ctlContrast">100%</output></label><input type="range" id="ctlContrast" min="40" max="240" value="100" step="5"></div>
+        <div class="slider-control"><label for="ctlZoom">Zoom <output id="zoomValue" for="ctlZoom">100%</output></label><input type="range" id="ctlZoom" min="100" max="400" value="100" step="10"></div>
+        <div class="tool-buttons" role="group" aria-label="Image transformations">
+          <button id="zoomOut" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+          <button id="zoomIn" type="button" title="Zoom in" aria-label="Zoom in">＋</button>
+          <button id="rotateLeft" type="button" title="Rotate 90 degrees counterclockwise" aria-label="Rotate left">↶</button>
+          <button id="rotateRight" type="button" title="Rotate 90 degrees clockwise" aria-label="Rotate right">↷</button>
+          <button id="flipImage" type="button" title="Flip horizontally" aria-label="Flip horizontally">⇋</button>
+          <button id="invertImage" type="button" title="Invert grayscale" aria-pressed="false">◑ Invert</button>
+          <button id="resetImage" type="button" title="Reset all visualization controls">⟲ Reset</button>
+        </div>
+      </div>
+      <div class="preset-line" role="group" aria-label="Display presets"><span>Quick views</span><button type="button" data-preset="normal">Original display</button><button type="button" data-preset="bright">Brighter</button><button type="button" data-preset="contrast">Higher contrast</button><span class="preset-tip">Reset returns to original brightness and orientation</span></div>
+      <div class="viewer-options">
+        <label class="setting-check"><input id="showContours" type="checkbox" checked> Include ROI image in batch previews</label>
+        <label class="setting-check"><input id="syncImages" type="checkbox" checked> Apply adjustments to batch previews</label>
+        <span class="view-note">View only · ratings are independent of display settings</span>
+      </div>
+    </section>
     <div class="decide">
       <div class="rating-wrap">
         <div class="rating-title">Your rating <span>1 = lowest · 10 = highest</span></div>
@@ -373,6 +401,12 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
         <button class="btn-ghost" id="nextBelow" type="button">Next →</button>
       </nav>
     </div>
+      <div id="batchArea" class="batch-area">
+        <div class="batch-head"><div><h4>Batch grid · adjacent cases</h4><p>Browse every case in sets. Select a case to rate it; each tile shows original, generated and ROI images.</p></div>
+          <label for="batchSize">Cases per page <select id="batchSize"><option value="6">6</option><option value="9" selected>9</option><option value="12">12</option></select></label></div>
+        <div class="batch-grid" id="batchGrid" aria-label="Batch images from nearby cases"></div>
+        <div class="batch-footer"><span id="batchRange" aria-live="polite"></span><div><button id="batchPrev" type="button">← Previous batch</button><button id="batchNext" type="button">Next batch →</button></div></div>
+      </div>
   </section>
 </main>
 
@@ -396,11 +430,20 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
   </div>
 </section>
 
-<dialog id="zoom" aria-label="Enlarged images">
-  <div class="zoom">
-    <div class="zoom-row" id="zoomRow"></div>
-    <div class="zoom-cap"><span id="zoomCap"></span><button id="zoomClose">Close (Esc)</button></div>
+<dialog id="compareDialog" class="comparison-dialog" aria-label="Three-image full-screen comparison">
+  <header class="comparison-dialog-head"><div><div class="studio-eyebrow">SIDE-BY-SIDE INSPECTION</div><h3 id="compareTitle">Case comparison</h3><p>Review the three image sources together · changes affect display only</p></div><button type="button" id="compareClose">✕ Close</button></header>
+  <div class="compare-grid" id="compareGrid">
+    <button type="button" class="compare-panel" data-panel="0"><span>01 · Original FLAIR</span><img draggable="false" alt="Original FLAIR"></button>
+    <button type="button" class="compare-panel" data-panel="1"><span>02 · Generated MRI</span><img draggable="false" alt="Generated MRI"></button>
+    <button type="button" class="compare-panel" data-panel="2"><span>03 · Generated + ROI</span><img draggable="false" alt="Generated MRI with ROI"></button>
   </div>
+  <footer class="compare-footer"><span>Click a panel for individual inspection · Use the main toolbar for synchronized adjustments</span><button type="button" id="compareCloseBottom">Close comparison</button></footer>
+</dialog>
+<dialog id="zoom" class="inspect-dialog" aria-label="Advanced MRI image inspector">
+  <div class="inspect-head"><div><div class="studio-eyebrow">FULL-SIZE IMAGE INSPECTOR</div><h3 id="inspectTitle">MRI inspection</h3></div><button id="zoomClose" type="button">✕ Close (Esc)</button></div>
+  <div class="inspect-tabs" id="inspectTabs" role="group" aria-label="Choose image to inspect"><button type="button" data-panel="0">01 Original</button><button type="button" data-panel="1">02 Generated</button><button type="button" data-panel="2">03 ROI overlay</button></div>
+  <div class="inspect-stage" id="inspectStage"><img id="inspectImage" draggable="false" alt="Full-screen MRI image"><span class="inspect-tip">Drag to pan · Scroll to zoom</span></div>
+  <div class="inspect-footer"><div class="inspect-commands"><button id="inspectMinus" type="button">− Zoom</button><button id="inspectPlus" type="button">＋ Zoom</button><button id="inspectRotate" type="button">↷ Rotate</button><button id="inspectFlip" type="button">⇋ Flip</button><button id="inspectReset" type="button">⟲ Reset</button></div><span id="zoomCap">240 × 240 px source · display adjustment only</span></div>
 </dialog>
 <div class="toast" id="toast" hidden></div>
 
@@ -475,6 +518,192 @@ const $ = id => document.getElementById(id);
 let mine = {};               // caseId -> {decision, note, at}
 let reviewer = "";
 let current = 0, filter = "ALL";
+
+/* Visual inspection preferences are separate from case ratings and never exported. */
+const VIEWER_KEY = LOCAL_KEY + '-viewer-studio-v3';
+const DEFAULT_VIEWER = Object.freeze({ brightness:100, contrast:100, zoom:100, rotation:0, flip:false, invert:false, sync:true, contours:true, mode:'grid', batchSize:9, source:2 });
+const PANEL_BASE_ROTATIONS = Object.freeze([90, 90, 90]);
+// Start every visit in the same unbiased, three-image comparison mode.
+// Only reviews, reviewer identity, and notes persist across visits;
+// transient display adjustments do not override the default first view.
+function viewerSettings() {
+  return {...DEFAULT_VIEWER};
+}
+let viewer = viewerSettings();
+let filmPans = [{x:0,y:0},{x:0,y:0},{x:0,y:0}], inspectPan={x:0,y:0}, inspectPanel=2, inspectCase=0, batchStart=0;
+const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
+function storeViewer(){ try { localStorage.setItem(VIEWER_KEY, JSON.stringify(viewer)); } catch(e){} }
+function sourceName(j){return ['Original FLAIR','Generated MRI','Generated + ROI overlay'][j];}
+function filterCSS(){return `brightness(${viewer.brightness / 100}) contrast(${viewer.contrast / 100}) invert(${viewer.invert ? 1 : 0})`;}
+function panelRotation(panel){ return ((PANEL_BASE_ROTATIONS[panel] || 0) + viewer.rotation + 360) % 360; }
+function viewportTransform(pan,zoom,panel=0){return `translate(${pan.x}px, ${pan.y}px) rotate(${panelRotation(panel)}deg) scale(${zoom / 100}) scaleX(${viewer.flip ? -1 : 1})`; }
+function applyViewer(){
+  $('ctlBrightness').value=viewer.brightness; $('ctlContrast').value=viewer.contrast; $('ctlZoom').value=viewer.zoom;
+  $('brightnessValue').textContent=viewer.brightness+'%'; $('contrastValue').textContent=viewer.contrast+'%'; $('zoomValue').textContent=viewer.zoom+'%';
+  $('showContours').checked=viewer.contours; $('syncImages').checked=viewer.sync;
+  $('batchSize').value=viewer.batchSize;
+  $('invertImage').setAttribute('aria-pressed',String(viewer.invert));
+  $('flipImage').setAttribute('aria-pressed',String(viewer.flip));
+  $('inspectImage').style.filter=filterCSS(); $('inspectImage').style.transform=viewportTransform(inspectPan,viewer.zoom,inspectPanel);
+  $('films').querySelectorAll('.film').forEach((button,j)=>{
+    const img=button.querySelector('img'); if(!img) return;
+    button.classList.toggle('zoom-active',viewer.zoom>100);
+    img.style.filter=filterCSS();
+    img.style.transform=viewportTransform(filmPans[j],viewer.zoom,j);
+  });
+  $('compareGrid').querySelectorAll('.compare-panel').forEach((panelEl,j)=>{
+    const img=panelEl.querySelector('img'); if(!img) return;
+    img.style.filter=filterCSS();
+    img.style.transform=viewportTransform({x:0,y:0},viewer.zoom,j);
+  });
+  $('batchGrid').querySelectorAll('.batch-image img').forEach(img=>{
+    const panel=Number(img.dataset.panel || 0);
+    img.style.filter=viewer.sync ? filterCSS() : 'none';
+    img.style.transform=viewer.sync ? `rotate(${panelRotation(panel)}deg) scaleX(${viewer.flip ? -1 : 1})` : 'none';
+  });
+  $('batchArea').hidden=viewer.mode==='focus';
+  $('modeGrid').setAttribute('aria-pressed',String(viewer.mode==='grid'));
+  $('modeFocus').setAttribute('aria-pressed',String(viewer.mode==='focus'));
+  storeViewer();
+}
+function setZoom(v){viewer.zoom=clamp(Math.round(v/10)*10,100,400);applyViewer();}
+function rotateViewer(delta){ viewer.rotation=(viewer.rotation+delta+360)%360; applyViewer(); }
+function resetVisualization(){
+  const mode=viewer.mode,batchSize=viewer.batchSize;
+  viewer={...DEFAULT_VIEWER,mode,batchSize}; filmPans=[{x:0,y:0},{x:0,y:0},{x:0,y:0}];inspectPan={x:0,y:0};
+  renderStudioCase(); applyViewer();
+  toast('Visualization reset · source images unchanged');
+}
+function displaySource(c, panel){return c.imgs[panel===2&&!viewer.contours ? 1 : panel];}
+function renderStudioCase(){
+  if(current<batchStart || current>=batchStart+viewer.batchSize) batchStart=Math.floor(current/viewer.batchSize)*viewer.batchSize;
+  renderBatch(); applyViewer();
+}
+function renderBatch(){
+  const grid=$('batchGrid'); grid.replaceChildren();
+  const last=Math.min(CASES.length,batchStart+viewer.batchSize);
+  const fragment=document.createDocumentFragment();
+  for(let i=batchStart;i<last;i++){
+    const c=CASES[i], rated=dOf(c.id)!=='PENDING';
+    const tile=document.createElement('article');tile.className='batch-card';
+    if(i===current) tile.classList.add('is-current');
+    const title=document.createElement('div');title.className='batch-card-head';
+    const pick=document.createElement('button');pick.type='button';pick.className='batch-pick';
+    pick.textContent='Case '+(i+1);pick.setAttribute('aria-label','Open case '+(i+1));pick.addEventListener('click',()=>go(i));
+    const status=document.createElement('span');status.className='batch-status';status.textContent=rated?'Reviewed':'Not rated';
+    title.append(pick,status);
+    const images=document.createElement('div');images.className='batch-images';
+    images.style.gridTemplateColumns=viewer.contours ? 'repeat(3,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))';
+    for(let j=0;j<(viewer.contours?3:2);j++){
+      const imBtn=document.createElement('button');imBtn.type='button';imBtn.className='batch-image';
+      imBtn.title='Inspect '+sourceName(j)+' · case '+(i+1);
+      const im=document.createElement('img');im.src=displaySource(c,j);im.loading='lazy';im.decoding='async';im.alt=sourceName(j)+' of case '+(i+1);im.dataset.panel=String(j);
+      const lab=document.createElement('small');lab.textContent=['BASE','SYN','ROI'][j];
+      imBtn.append(im,lab);imBtn.addEventListener('click',()=>openZoom(j,i));images.appendChild(imBtn);
+    }
+    tile.append(title,images);fragment.appendChild(tile);
+  }
+  grid.appendChild(fragment);
+  $('batchRange').textContent=`Showing ${batchStart+1}–${last} of ${CASES.length.toLocaleString()} cases · three images each`;
+  $('batchPrev').disabled=batchStart===0;$('batchNext').disabled=last===CASES.length;
+}
+function renderInspector(){
+  const caseObj=CASES[inspectCase];
+  $('inspectImage').src=caseObj.imgs[inspectPanel];
+  $('inspectImage').alt=sourceName(inspectPanel)+' for case '+(inspectCase+1);
+  $('inspectTitle').textContent='Case '+(inspectCase+1)+' · '+sourceName(inspectPanel);
+  $('zoomCap').textContent='Case '+(inspectCase+1)+' of '+CASES.length+' · 240 × 240 px native image · display changes only';
+  $('inspectTabs').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.panel)===inspectPanel)));
+  applyViewer();
+}
+function makePannable(stage,img,pan){
+  let last=null;
+  stage.addEventListener('pointerdown', e=>{
+    if(e.button!==0) return;
+    last={x:e.clientX,y:e.clientY};stage.setPointerCapture(e.pointerId);
+    stage.classList.add('is-dragging');
+  });
+  stage.addEventListener('pointermove', e=>{
+    if(!last)return;
+    pan.x+=e.clientX-last.x;pan.y+=e.clientY-last.y;
+    last={x:e.clientX,y:e.clientY};applyViewer();
+  });
+  const end=()=>{last=null;stage.classList.remove('is-dragging');};
+  stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
+  stage.addEventListener('lostpointercapture',end);
+  stage.addEventListener('wheel',e=>{e.preventDefault();setZoom(viewer.zoom+(e.deltaY<0?10:-10));},{passive:false});
+  stage.addEventListener('dblclick',()=>{pan.x=0;pan.y=0;applyViewer();});
+}
+function installImagePan(button,panel){
+  let p=null;
+  button.addEventListener('pointerdown',e=>{
+    if(e.button!==0 || viewer.zoom<=100) return;
+    p={x:e.clientX,y:e.clientY,moved:false};button.setPointerCapture(e.pointerId);
+  });
+  button.addEventListener('pointermove',e=>{
+    if(!p) return;
+    const dx=e.clientX-p.x,dy=e.clientY-p.y;
+    if(Math.abs(dx)+Math.abs(dy)>3) p.moved=true;
+    if(p.moved){filmPans[panel].x+=dx;filmPans[panel].y+=dy;applyViewer();button.classList.add('is-dragging');}
+    p.x=e.clientX;p.y=e.clientY;
+  });
+  const end=()=>{if(p&&p.moved)button.dataset.dragged='yes';p=null;button.classList.remove('is-dragging');};
+  button.addEventListener('pointerup',end);
+  button.addEventListener('pointercancel',end);
+  button.addEventListener('lostpointercapture',end);
+  button.addEventListener('dblclick',e=>{e.preventDefault();filmPans[panel]={x:0,y:0};applyViewer();});
+}
+function showCompare(){
+  $('compareTitle').textContent='Case '+(current+1)+' · three-image comparison';
+  $('compareGrid').querySelectorAll('.compare-panel img').forEach((img,j)=>{
+    img.src=CASES[current].imgs[j];img.alt=sourceName(j)+' of case '+(current+1);
+  });
+  applyViewer();$('compareDialog').showModal();
+}
+function setupStudio(){
+  [['ctlBrightness','brightness'],['ctlContrast','contrast'],['ctlZoom','zoom']].forEach(([id,key])=>
+    $(id).addEventListener('input',e=>{viewer[key]=Number(e.target.value);applyViewer();}));
+  $('zoomIn').addEventListener('click',()=>setZoom(viewer.zoom+20));
+  $('zoomOut').addEventListener('click',()=>setZoom(viewer.zoom-20));
+  $('rotateLeft').addEventListener('click',()=>rotateViewer(-90));
+  $('rotateRight').addEventListener('click',()=>rotateViewer(90));
+  $('flipImage').addEventListener('click',()=>{viewer.flip=!viewer.flip;applyViewer();});
+  $('invertImage').addEventListener('click',()=>{viewer.invert=!viewer.invert;applyViewer();});
+  $('resetImage').addEventListener('click',resetVisualization);
+  $('showContours').addEventListener('change',e=>{viewer.contours=e.target.checked;renderBatch();if($('zoom').open)renderInspector();applyViewer();});
+  $('syncImages').addEventListener('change',e=>{viewer.sync=e.target.checked;applyViewer();});
+  $('modeGrid').addEventListener('click',()=>{viewer.mode='grid';applyViewer();});
+  $('modeFocus').addEventListener('click',()=>{viewer.mode='focus';applyViewer();});
+  $('batchSize').addEventListener('change',e=>{viewer.batchSize=Number(e.target.value);batchStart=Math.floor(current/viewer.batchSize)*viewer.batchSize;renderBatch();applyViewer();});
+  $('batchPrev').addEventListener('click',()=>{batchStart=Math.max(0,batchStart-viewer.batchSize);renderBatch();});
+  $('batchNext').addEventListener('click',()=>{batchStart=Math.min(Math.floor((CASES.length-1)/viewer.batchSize)*viewer.batchSize,batchStart+viewer.batchSize);renderBatch();});
+  $('inspectTabs').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{inspectPanel=Number(b.dataset.panel);inspectPan.x=0;inspectPan.y=0;renderInspector();}));
+  $('inspectMinus').addEventListener('click',()=>setZoom(viewer.zoom-20));
+  $('inspectPlus').addEventListener('click',()=>setZoom(viewer.zoom+20));
+  $('inspectRotate').addEventListener('click',()=>rotateViewer(90));
+  $('inspectFlip').addEventListener('click',()=>{viewer.flip=!viewer.flip;applyViewer();});
+  $('inspectReset').addEventListener('click',resetVisualization);
+  makePannable($('inspectStage'),$('inspectImage'),inspectPan);
+  $('compareOpen').addEventListener('click',showCompare);
+  $('compareClose').addEventListener('click',()=>$('compareDialog').close());
+  $('compareCloseBottom').addEventListener('click',()=>$('compareDialog').close());
+  $('compareDialog').querySelectorAll('.compare-panel').forEach(el=>el.addEventListener('click',()=>{
+    const panel=Number(el.dataset.panel);$('compareDialog').close();openZoom(panel);
+  }));
+  $('compareDialog').addEventListener('click',e=>{if(e.target===$('compareDialog'))$('compareDialog').close();});
+  document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
+    const p=b.dataset.preset;
+    viewer.brightness=p==='bright'?145:100;
+    viewer.contrast=p==='contrast'?165:100;
+    applyViewer();
+  }));
+  $('zoom').addEventListener('keydown',e=>{
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+      e.preventDefault();inspectPanel=(inspectPanel+(e.key==='ArrowRight'?1:2))%3;renderInspector();
+    }
+  });
+}
+
 
 function updateReviewerIdentity() {
   const field = $("reviewerName");
@@ -575,17 +804,25 @@ function renderCase(keepNote) {
   const films = $("films");
   if (films.dataset.case !== c.id) {
     films.dataset.case = c.id; films.innerHTML = "";
+    filmPans=[{x:0,y:0},{x:0,y:0},{x:0,y:0}];
     c.imgs.forEach((src, j) => {
       const f = document.createElement("figure");
       const btn = document.createElement("button"); btn.className = "film"; btn.title = "Enlarge";
       const img = document.createElement("img"); img.src = src; img.alt = PANELS[j][0] + ", case " + (current + 1);
       img.width = 240; img.height = 240;
-      btn.appendChild(img); btn.addEventListener("click", openZoom);
+      btn.appendChild(img);
+      installImagePan(btn,j);
+      btn.addEventListener("click", e => {if(btn.dataset.dragged==='yes'){btn.dataset.dragged='no';e.preventDefault();return;}openZoom(j);});
       const fc = document.createElement("figcaption");
       fc.innerHTML = '<span class="n">' + (j + 1) + '</span><span>' + PANELS[j][0] + '</span><span class="sub">' + PANELS[j][1] + '</span>';
+      const actions=document.createElement('span');actions.className='film-actions';
+      const rot=document.createElement('button');rot.type='button';rot.textContent='↻';rot.title='Rotate all images 90°';rot.setAttribute('aria-label','Rotate all images');rot.addEventListener('click',()=>rotateViewer(90));
+      const enlarge=document.createElement('button');enlarge.type='button';enlarge.textContent='⛶';enlarge.title='Inspect this image';enlarge.setAttribute('aria-label','Inspect '+PANELS[j][0]);enlarge.addEventListener('click',()=>openZoom(j));
+      actions.append(rot,enlarge);fc.appendChild(actions);
       f.append(btn, fc); films.appendChild(f);
     });
   }
+  renderStudioCase();
   document.querySelectorAll(".rating-button").forEach(button => button.setAttribute("aria-pressed", Number(button.dataset.score) === d));
 
 
@@ -834,11 +1071,12 @@ function show(v) {
   if (!rev) { commitNoteIfChanged(); renderSummary(); }
 }
 
-function openZoom() {
-  const c = CASES[current], row = $("zoomRow"); row.innerHTML = "";
-  c.imgs.forEach((src, j) => { const im = document.createElement("img"); im.src = src; im.alt = PANELS[j][0]; row.appendChild(im); });
-  $("zoomCap").textContent = "Case " + (current + 1) + " · original · generated · generated + contour · 240 × 240 px each";
-  $("zoom").showModal();
+function openZoom(panel = 2, caseIndex = current) {
+  inspectPanel = Number.isInteger(panel) && panel >= 0 && panel <= 2 ? panel : 2;
+  inspectCase = Math.max(0, Math.min(CASES.length - 1, caseIndex));
+  inspectPan.x = 0; inspectPan.y = 0;
+  renderInspector();
+  if (!$('zoom').open) $('zoom').showModal();
 }
 
 /* ---------- wiring ---------- */
@@ -887,6 +1125,10 @@ document.addEventListener("keydown", e => {
   else if (k === "arrowright") go(current + 1);
   else if (k === "arrowleft") go(current - 1);
   else if (k === "z") openZoom();
+  else if (k === "r") rotateViewer(90);
+  else if (k === "f") { viewer.flip = !viewer.flip; applyViewer(); }
+  else if (k === "+" || k === "=") setZoom(viewer.zoom + 20);
+  else if (k === "-") setZoom(viewer.zoom - 20);
   else return;
   e.preventDefault();
 });
@@ -931,8 +1173,25 @@ try { reviewer = localStorage.getItem(NAME_KEY) || ""; } catch (e) {}
 mine = loadLocal();
 buildStatic();
 setupAdvancedControls();
+setupStudio();
 renderAll();
 window.addEventListener("beforeunload", commitNoteIfChanged);
+
+// Opening view: show the three MRI source images immediately to every reviewer.
+// Navigation, annotations and image adjustment controls remain unchanged.
+try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch(e) {}
+function showThreeImageLanding() {
+  if (location.hash) return; // Honour explicit deep links.
+  const panel = document.querySelector(".film-head");
+  if (!panel || $("viewReview").hidden) return;
+  const topBar = document.querySelector(".bar");
+  const stickyHeight = topBar && getComputedStyle(topBar).position === "sticky" ? topBar.getBoundingClientRect().height : 0;
+  const top = Math.max(0, window.scrollY + panel.getBoundingClientRect().top - stickyHeight - 12);
+  window.scrollTo({top, behavior:"instant"});
+}
+window.addEventListener("pageshow", () => {
+  requestAnimationFrame(() => requestAnimationFrame(showThreeImageLanding));
+}, {once:true});
 </script>
 
 <style id="pro-final-layout">
@@ -982,4 +1241,151 @@ body { color:var(--text); background-color:var(--bg); background-image:radial-gr
   .note-meta #saveNote { grid-column:1;justify-self:start;min-height:44px; }
   .note-meta #noteCount { grid-column:2;justify-self:end; }
 }
-</style></body></html>
+</style>
+<style id="advanced-flair-visualization">
+/* The image workspace uses no third-party libraries; all views use the original embedded PNGs. */
+:root {--studio-blue:#84b9ff;}
+.studio-shell{border:1px solid var(--line);border-radius:18px;background:linear-gradient(155deg,rgba(29,49,76,.72),rgba(13,22,38,.96));padding:16px;display:grid;gap:15px;min-width:0;box-shadow:0 18px 40px rgba(0,0,0,.17)}
+.studio-intro{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.studio-eyebrow{color:var(--accent);font-size:.67rem;font-weight:800;letter-spacing:.15em}
+.studio-intro h3,.inspect-head h3{font-size:1.22rem;letter-spacing:-.025em;margin:3px 0 2px;font-family:var(--font-display)}
+.studio-intro p{font-size:.78rem;color:var(--muted);margin:2px 0 0}
+.mode-switch{display:flex;gap:4px;background:var(--bg);padding:4px;border:1px solid var(--line);border-radius:10px}
+.mode-switch button{border:0;border-radius:7px;padding:8px 13px;background:transparent;color:var(--muted);font-size:.79rem;font-weight:700;cursor:pointer}
+.mode-switch button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.viewer-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:15px;border:1px solid var(--line);border-radius:12px;padding:13px;background:rgba(4,12,25,.38)}
+.slider-control{display:grid;gap:7px;flex:1 1 140px;max-width:230px;min-width:120px}
+.slider-control label{font-size:.74rem;font-weight:700;display:flex;justify-content:space-between;gap:12px;color:var(--text)}
+.slider-control output{font-family:var(--font-mono);color:var(--accent)}
+.slider-control input[type=range]{width:100%;height:7px;accent-color:var(--accent);cursor:pointer}
+.tool-buttons{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tool-buttons button,.inspect-commands button,.batch-footer button,.inspect-head button,.hero-meta button{background:var(--raise);color:var(--text);border:1px solid var(--line);border-radius:8px;min-height:35px;padding:5px 11px;cursor:pointer;font-weight:700;font-size:.78rem}
+.tool-buttons button:hover,.inspect-commands button:hover,.batch-footer button:hover,.hero-meta button:hover{border-color:var(--accent);background:rgba(98,212,194,.11)}
+.tool-buttons button[aria-pressed=true]{background:rgba(98,212,194,.2);border-color:var(--accent)}
+.viewer-options{display:flex;flex-wrap:wrap;align-items:center;gap:9px 22px;font-size:.77rem;color:var(--muted)}
+.viewer-options label{display:flex;gap:7px;align-items:center;cursor:pointer}
+.viewer-options input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+.viewer-options select,.batch-head select{background:var(--raise);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:8px;font:inherit}
+.view-note{margin-left:auto;font-size:.71rem;color:var(--muted)}
+.hero-shell{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#05090f}
+.hero-meta{display:flex;align-items:center;gap:11px;padding:9px 12px;color:var(--text);font-size:.81rem;font-weight:700;background:var(--raise)}
+.live-dot{display:inline-block;width:7px;height:7px;border-radius:100%;background:var(--accent);box-shadow:0 0 0 4px rgba(98,212,194,.1)}
+.hero-pixels{font-family:var(--font-mono);font-size:.69rem;color:var(--muted);font-weight:500}
+.hero-meta button{margin-left:auto}
+.hero-stage{position:relative;height:clamp(290px,40vw,490px);display:flex;justify-content:center;align-items:center;overflow:hidden;background:#000;touch-action:none;cursor:grab;user-select:none}
+.hero-stage.is-dragging,.inspect-stage.is-dragging{cursor:grabbing}
+.hero-stage img{width:min(84%,460px);height:min(88%,460px);object-fit:contain;max-width:none;pointer-events:none;user-select:none;will-change:transform,filter;transition:filter .08s}
+.stage-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:999px;background:rgba(21,31,46,.78);border:1px solid #293747;font-size:.73rem;color:#d1dded;white-space:nowrap;pointer-events:none}
+.film-head,.batch-head{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.film-head h4,.batch-head h4{font-size:.96rem;letter-spacing:-.01em;margin:0 0 2px}
+.film-head span,.batch-head p{font-size:.75rem;color:var(--muted);margin:0}
+.case-image-count{color:var(--accent);font-size:.76rem;font-family:var(--font-mono);border:1px solid var(--line);padding:5px 10px;border-radius:8px}
+#films{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#films figure{background:rgba(10,18,32,.7);padding:10px;border-radius:12px;border:1px solid var(--line);box-shadow:none}
+#films .film{aspect-ratio:1.2!important;background:#000;border:1px solid #304157;display:grid;place-items:center;overflow:hidden;cursor:zoom-in}
+#films .film img{height:100%;width:100%;object-fit:contain;filter:var(--tile-filter,none);transform:var(--tile-transform,none);transition:filter .08s}
+#films figcaption{display:flex;flex-wrap:wrap;gap:4px 8px;line-height:1.3;font-weight:700;font-size:.76rem}
+#films figcaption .sub{width:100%;font-weight:400;font-size:.7rem}
+.batch-area{border-top:1px solid var(--line);padding-top:16px;display:grid;gap:12px}
+.batch-head>label{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.75rem}
+.batch-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.batch-card{min-width:0;background:rgba(5,10,21,.54);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:border-color .12s,box-shadow .12s}
+.batch-card:hover{border-color:rgba(98,212,194,.6)}
+.batch-card.is-current{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 24px rgba(98,212,194,.11)}
+.batch-card-head{display:flex;justify-content:space-between;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.batch-pick{background:none;border:0;color:var(--text);font-weight:750;font-size:.8rem;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;text-align:left;padding:1px}
+.batch-pick:hover{color:var(--accent)}
+.batch-status{font-size:.64rem;color:var(--muted);white-space:nowrap}
+.batch-card.is-current .batch-status{color:var(--accent)}
+.batch-images{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;padding:7px}
+.batch-image{border:1px solid #202a37;background:#000;padding:2px;min-width:0;position:relative;border-radius:5px;cursor:zoom-in;display:grid;grid-template-rows:auto auto;overflow:hidden}
+.batch-image img{width:100%;aspect-ratio:1;object-fit:contain;display:block;filter:var(--tile-filter,none);transform:var(--tile-transform,none)}
+.batch-image small{font-family:var(--font-mono);font-size:.57rem;color:#b9cce3;text-align:center;padding:2px 0 0;letter-spacing:.03em}
+.batch-image:hover{border-color:var(--accent)}
+.batch-footer{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:12px;color:var(--muted);font-size:.76rem}
+.batch-footer>div{display:flex;gap:7px}
+.batch-footer button:disabled{opacity:.38;cursor:not-allowed}
+.inspect-dialog{width:min(95vw,1150px);max-width:1150px;max-height:96vh;background:#0d1728;border:1px solid #30445f;border-radius:16px;overflow:hidden;color:#edf4ff;box-shadow:0 28px 80px rgba(0,0,0,.5)}
+.inspect-dialog::backdrop{background:rgba(0,0,0,.92)}
+.inspect-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid #283955}
+.inspect-head h3{margin:3px 0}
+.inspect-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:10px 16px}
+.inspect-tabs button{cursor:pointer;background:#17243a;color:#cad7e8;border:1px solid #314460;border-radius:8px;padding:9px 14px;font-weight:700}
+.inspect-tabs button[aria-pressed=true]{background:#62d4c2;color:#06201d;border-color:#62d4c2}
+.inspect-stage{height:min(68vh,720px);min-height:280px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:#000;touch-action:none;cursor:grab;user-select:none}
+.inspect-stage img{width:min(75vw,640px);height:min(60vh,640px);max-width:none;object-fit:contain;pointer-events:none;user-select:none;will-change:transform,filter}
+.inspect-tip{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);background:rgba(20,30,43,.75);border-radius:99px;padding:5px 12px;color:#c4d3e5;font-size:.7rem;pointer-events:none}
+.inspect-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 16px;color:#adbed3;font-size:.7rem}
+.inspect-commands{display:flex;flex-wrap:wrap;gap:6px}
+@media(max-width:1250px){.batch-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.viewer-toolbar{gap:12px}}
+@media(max-width:900px){.batch-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.studio-shell{padding:11px;gap:12px}.studio-intro{align-items:flex-start}.mode-switch{width:100%}.mode-switch button{flex:1}.slider-control{min-width:90px;max-width:none;flex:1 1 100px}.tool-buttons{width:100%}.tool-buttons button{flex:1}.view-note{margin-left:0}.hero-stage{height:320px}#films{grid-template-columns:1fr!important}.batch-grid{grid-template-columns:1fr}.batch-image img{max-height:120px}.stage-hint,.inspect-tip{font-size:.59rem}.hero-pixels{display:none}.batch-footer>div{width:100%}.batch-footer button{flex:1}.inspect-stage{height:55vh}}
+</style>
+
+<style id="flair-three-image-refinements">
+/* Primary workflow: all three images first, ratings second, batch library last. */
+.studio-shell{padding:17px 18px;gap:13px;box-shadow:0 10px 28px rgba(0,0,0,.13);background:linear-gradient(155deg,rgba(31,51,76,.77),rgba(15,26,42,.96))}
+.studio-intro{padding-bottom:12px;border-bottom:1px solid rgba(142,168,199,.14)}
+.studio-intro h3{font-size:1.3rem}
+.studio-intro p{max-width:680px}
+.film-head{padding:2px 1px 0}
+.film-head h4{font-size:1.01rem;letter-spacing:-.015em}
+.film-head span{font-size:.74rem}
+.film-head-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.compare-open{border:1px solid rgba(98,212,194,.42);background:rgba(98,212,194,.12);color:var(--text);border-radius:9px;cursor:pointer;font:700 .76rem var(--font-body);padding:9px 13px}
+.compare-open:hover{background:rgba(98,212,194,.22);border-color:var(--accent)}
+#films{gap:13px}
+#films figure{padding:9px;border-radius:13px;overflow:hidden;background:rgba(7,15,27,.72);border:1px solid rgba(122,159,199,.3);transition:border-color .16s,box-shadow .16s}
+#films figure:hover{border-color:rgba(98,212,194,.75);box-shadow:0 10px 24px rgba(0,0,0,.2)}
+#films .film{aspect-ratio:auto!important;height:clamp(220px,26.5vw,408px);display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;border:1px solid #2b3b50;border-radius:8px;touch-action:pan-y;cursor:zoom-in}
+#films .film.zoom-active{cursor:grab;touch-action:none}
+#films .film.zoom-active.is-dragging{cursor:grabbing}
+#films .film img{width:100%;height:100%;object-fit:contain;max-width:none;max-height:none;pointer-events:none;user-select:none;transform-origin:center;transition:filter .09s ease;will-change:transform,filter}
+#films figcaption{align-items:center;gap:6px 8px;padding:5px 3px 2px;min-height:52px;line-height:1.25;display:grid;grid-template-columns:auto minmax(0,1fr) auto}
+#films figcaption .n{border-radius:7px;display:grid;place-items:center;width:26px;height:26px;background:rgba(98,212,194,.14);color:var(--accent)}
+#films figcaption .sub{font-size:.68rem;grid-column:2/3;width:auto;line-height:1.35}
+.film-actions{grid-column:3;grid-row:1/3;display:flex;gap:4px}
+.film-actions button{border:1px solid var(--line);border-radius:7px;background:rgba(47,67,95,.53);color:var(--text);padding:6px 9px;font-size:.75rem;cursor:pointer}
+.film-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.tool-heading{display:flex;gap:9px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:4px}
+.tool-heading>div{display:flex;gap:5px 14px;flex-wrap:wrap;align-items:baseline}
+.tool-heading strong{font-size:.83rem}
+.tool-heading span{color:var(--muted);font-size:.71rem}
+.tool-heading .visual-only{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.viewer-toolbar{padding:12px;background:rgba(6,15,27,.42);gap:10px 15px}
+.slider-control{max-width:none;min-width:142px;flex:1 1 150px}
+.slider-control input[type=range]{min-height:21px}
+.tool-buttons{gap:5px}
+.tool-buttons button{font-size:.79rem;min-height:37px}
+.preset-line{display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.72rem}
+.preset-line>span:first-child{font-weight:750;color:var(--text);margin-right:2px}
+.preset-line button{border:1px solid var(--line);background:rgba(4,13,25,.22);border-radius:999px;color:var(--muted);cursor:pointer;font:600 .69rem var(--font-body);padding:5px 10px}
+.preset-line button:hover{color:var(--text);border-color:var(--accent)}
+.preset-tip{margin-left:auto;color:var(--muted);font-size:.67rem}
+.viewer-options{border-top:1px solid rgba(142,168,199,.14);padding-top:9px;gap:9px 18px}
+.view-note{margin-left:auto}
+.notice[data-mode=shared]{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:9px 14px;}
+.notice[data-mode=shared] #reviewerName{width:210px!important;min-width:140px!important;flex:0 1 210px}
+.notice[data-mode=shared] #finishText{flex:1 1 275px;min-width:200px}
+.notice[data-mode=shared] #finish{flex:0 0 auto;margin-left:auto!important}
+.case>.decide{margin-top:0}
+.case>.batch-area{border:1px solid var(--line);border-radius:15px;padding:16px;background:rgba(14,23,40,.45);margin-top:4px}
+.batch-card{background:rgba(5,12,24,.64)}
+.batch-image img{transform-origin:center}
+.comparison-dialog{border:1px solid #3a4c64;border-radius:17px;padding:0;background:#111b2a;color:#e9f2ff;max-width:98vw;width:min(1600px,97vw);max-height:95vh;overflow:auto;box-shadow:0 30px 100px rgba(0,0,0,.7)}
+.comparison-dialog::backdrop{background:rgba(0,0,0,.91)}
+.comparison-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 20px;border-bottom:1px solid #293950}
+.comparison-dialog-head h3{margin:2px 0;font:800 1.3rem var(--font-display)}
+.comparison-dialog-head p{margin:0;color:#a6b6ca;font-size:.73rem}
+.comparison-dialog-head button,.compare-footer button{border:1px solid #425675;background:#1b2d45;border-radius:8px;color:#f1f7ff;cursor:pointer;font:700 .78rem var(--font-body);padding:9px 13px}
+.compare-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:15px}
+.compare-panel{background:#000;min-width:0;border:1px solid #2d3e55;border-radius:10px;overflow:hidden;padding:0;color:#dce9f6;text-align:left;cursor:zoom-in}
+.compare-panel>span{display:block;background:#17243a;padding:10px 13px;font:700 .8rem var(--font-body)}
+.compare-panel img{width:100%;height:min(63vh,620px);display:block;object-fit:contain;transform-origin:center;max-width:none;user-select:none;pointer-events:none}
+.compare-panel:hover{border-color:#62d4c2}
+.compare-footer{padding:12px 16px;border-top:1px solid #293950;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#9caec5;font-size:.73rem}
+@media(max-width:1150px){#films .film{height:clamp(205px,28vw,330px)}#films figcaption{grid-template-columns:auto 1fr;}.film-actions{grid-column:1/-1;grid-row:auto;justify-content:flex-end}}
+@media(max-width:700px){.notice[data-mode=shared] #reviewerName{width:100%!important;flex:1 1 100%}.notice[data-mode=shared] #finish{margin-left:0!important;flex:1 1 100%}.studio-shell{padding:12px}.film-head-actions{width:100%;justify-content:space-between}#films{grid-template-columns:1fr!important}#films .film{height:clamp(280px,72vw,450px)}#films figcaption{grid-template-columns:auto 1fr auto}.film-actions{grid-column:3;grid-row:1/3}.preset-tip{margin-left:0}.compare-grid{grid-template-columns:1fr}.compare-panel img{height:46vh}.comparison-dialog-head{padding:12px;}.compare-footer{padding:12px}}
+@media(prefers-reduced-motion:reduce){#films figure{transition:none}}
+</style>
+</body></html>
