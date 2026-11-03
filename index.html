@@ -283,7 +283,6 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
   </div>
   <div class="tally" aria-live="polite">
     <div class="t-ap"><b id="nAp">0</b><span>Rated</span></div>
-    <div class="t-ne"><b id="nNe">—</b><span>Average rating</span></div>
     
     <div class="t-pe"><b id="nPe">0</b><span>Pending</span></div>
   </div>
@@ -718,9 +717,7 @@ function renderTally() {
   const n = CASES.length;
   const scores = CASES.map(c => dOf(c.id)).filter(score => Number.isInteger(score));
   const pending = n - scores.length;
-  const average = scores.length ? (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(1) : "—";
   $("nAp").textContent = scores.length;
-  $("nNe").textContent = average;
   $("nPe").textContent = pending;
   $("pAp").style.width = (100 * scores.length / n) + "%";
   $("pNe").style.width = (100 * pending / n) + "%";
