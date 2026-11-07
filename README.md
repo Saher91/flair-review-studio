@@ -33,4 +33,4 @@ Reviewers must enter a name before they can rate or annotate. Choosing a rating 
 The review interface uses a fixed dark navy theme (#19273D), adapts to phone-sized screens, and does not follow a reviewer's light-system preference.
 
 
-The English video tutorial opens on the first visit in each browser. Watching, skipping, pressing Escape, or refreshing after the tutorial opens records that visit locally. It stays dismissed on later visits; **Watch tutorial** beside the reviewer controls replays it. Browser audio restrictions may require selecting **Start tutorial**. Clearing site data or using a different browser shows the guide again.
+The English video tutorial opens every time the platform loads, including after a refresh. **Skip tutorial** closes it for the current visit, and **Watch tutorial** replays it. Browser audio restrictions may require selecting **Start tutorial**. Tutorial dismissal does not change saved ratings, notes, or reviewer identity.

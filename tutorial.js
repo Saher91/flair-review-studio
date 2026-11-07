@@ -1,6 +1,5 @@
 (() => {
   'use strict';
-  const SEEN_KEY = 'flair-review-studio:tutorial-seen:v1';
   const dialog = document.createElement('dialog');
   dialog.id = 'onboardingTutorial';
   dialog.setAttribute('aria-labelledby', 'tutorialTitle');
@@ -16,16 +15,7 @@
   // Keep replay available beside the reviewer identity and finishing controls.
   document.getElementById('notice').appendChild(replay);
   let returnFocus = null;
-  function hasSeen() {
-    try { if (localStorage.getItem(SEEN_KEY) === '1') return true; } catch (_) {}
-    try { return sessionStorage.getItem(SEEN_KEY) === '1'; } catch (_) { return false; }
-  }
-  function rememberVisit() {
-    try { localStorage.setItem(SEEN_KEY, '1'); } catch (_) {}
-    try { sessionStorage.setItem(SEEN_KEY, '1'); } catch (_) {}
-  }
   function dismiss() {
-    rememberVisit();
     if (dialog.open) dialog.close();
   }
   function openTutorial() {
@@ -36,8 +26,6 @@
     play.textContent = 'Start tutorial';
     hint.textContent = 'English narration. Select Start tutorial to hear the guide.';
     dialog.showModal();
-    // Record the first display too, so refreshing during the tutorial never repeats it.
-    rememberVisit();
     video.play().catch(() => { /* Browsers may require a click before playing narration. */ });
   }
   play.addEventListener('click', () => {
@@ -60,5 +48,5 @@
     if (focusTarget) focusTarget.focus();
   });
   replay.addEventListener('click', openTutorial);
-  if (!hasSeen()) openTutorial();
+  openTutorial();
 })();
