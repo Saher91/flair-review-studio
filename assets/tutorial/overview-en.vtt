@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:08.838
+Enter your name to begin. When Reviewer ready appears, you can start rating cases and adding observations.
+
+2
+00:00:08.838 --> 00:00:17.416
+Each case shows the original Flair image, the generated M R I, and the generated image with its outlined region.
+
+3
+00:00:17.416 --> 00:00:24.460
+Open an image for closer inspection, or view all three together in the full screen comparison.
+
+4
+00:00:24.460 --> 00:00:35.697
+Display controls help you inspect image details. Reset restores the default view. These adjustments leave the source images unchanged.
+
+5
+00:00:35.697 --> 00:00:44.116
+Choose a rating from one to ten, following your study criteria. The case stays open for comments.
+
+6
+00:00:44.116 --> 00:00:55.664
+Add your observations under Case annotations. Quick headings organize comments. Check the save status, or select Save comment now.
+
+7
+00:00:55.664 --> 00:01:06.442
+Select Next to continue. The navigator helps you revisit cases, find a specific case, or show only unrated cases.
+
+8
+00:01:06.442 --> 00:01:16.570
+Check Summary to review your work. When finished, select Finish and download CSV, and keep your backup file.

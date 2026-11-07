@@ -69,6 +69,8 @@ body { background:radial-gradient(ellipse at 82% -8%,rgba(50,103,170,.19),transp
 @media (max-width:700px) { .tally { width:100%; justify-content:space-between; }.tally div { min-width:0; flex:1; }.films { grid-template-columns:1fr; }.films figure { grid-template-columns:minmax(0,1fr); }.map .grid64 { grid-template-columns:repeat(12,minmax(0,1fr)); }.case-head .nav { width:100%;margin-left:0; }.case-head .nav button { flex:1; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }</style>
 <script src="./review-config.js"></script>
+<link rel="stylesheet" href="./tutorial.css">
+<script defer src="./tutorial.js"></script>
 </head><body>
 <title>FLAIR Case Review Studio — Pro</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1049,7 +1051,7 @@ $("filter").addEventListener("click", e => {
   renderSummary();
 });
 document.addEventListener("keydown", e => {
-  if (e.target.closest("textarea, input") || $("zoom").open || $("viewReview").hidden) return;
+  if (e.target.closest("textarea, input") || $("zoom").open || document.getElementById("onboardingTutorial")?.open || $("viewReview").hidden) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === "/") { e.preventDefault(); $("caseSearch").focus(); return; }
@@ -1115,7 +1117,7 @@ window.addEventListener("beforeunload", commitNoteIfChanged);
 // Navigation, annotations and image adjustment controls remain unchanged.
 try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch(e) {}
 function showThreeImageLanding() {
-  if (location.hash) return; // Honour explicit deep links.
+  if (location.hash || document.getElementById("onboardingTutorial")?.open) return; // Honour deep links and tutorial focus.
   const panel = document.querySelector(".film-head");
   if (!panel || $("viewReview").hidden) return;
   const topBar = document.querySelector(".bar");
