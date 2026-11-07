@@ -13,7 +13,7 @@ This folder is a static-site package for hosting the review app on GitHub Pages.
 
 For an existing deployment, paste an updated `apps-script/Code.gs` into the sheet's Apps Script editor, then select **Deploy → Manage deployments**, edit the web-app deployment, choose **New version**, and click **Deploy**. The existing `/exec` URL stays the same.
 
-The app sends a case result when it is rated or a note changes. Requests are serialized, retried, and checked against the Apps Script JSON response; the note status reports a confirmed save or the error, and **Save comment now** retries manually. The Apps Script updates the row for the same reviewer and case instead of adding a duplicate. **Finish** also resends saved results and downloads a CSV backup.
+The app sends a case result when it is rated or a note changes. Requests are serialized, retried, and checked against the Apps Script JSON response; the note status reports a confirmed save or the error, and **Save comment now** retries manually. The Apps Script updates the row for the same reviewer and case instead of adding a duplicate. **Finish review** resends saved results to the configured sheet.
 
 The Apps Script web app accepts public POST requests. Do not put patient identifiers, confidential notes, or other sensitive information in review notes. Monitor the results sheet for unwanted submissions.
 
@@ -28,7 +28,7 @@ The original review HTML is over GitHub's 100 MB per-file limit. This package sp
 
 ## Reviewer workflow
 
-Reviewers must enter a name before they can rate or annotate. Choosing a rating keeps the reviewer on the current case so they can add a note; use **Next** to move on. Notes save to the browser while typing and sync to the configured sheet after typing pauses; leaving the note field or clicking **Save comment now** sends it immediately. The note status indicates when a request was sent. Open the sheet's **Review Results** tab to verify that it arrived. **Finish** downloads a CSV copy and resubmits the saved results.
+Reviewers must enter a name before they can rate or annotate. Choosing a rating keeps the reviewer on the current case so they can add a note; use **Next** to move on. Notes save to the browser while typing and sync to the configured sheet after typing pauses; leaving the note field or clicking **Save comment now** sends it immediately. The note status indicates when a request was sent. Open the sheet's **Review Results** tab to verify that it arrived. **Finish review** submits the saved results.
 
 The review interface uses a fixed dark navy theme (#19273D), adapts to phone-sized screens, and does not follow a reviewer's light-system preference.
 

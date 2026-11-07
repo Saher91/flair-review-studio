@@ -5,7 +5,7 @@
   dialog.id = 'onboardingTutorial';
   dialog.setAttribute('aria-labelledby', 'tutorialTitle');
   dialog.setAttribute('aria-describedby', 'tutorialDescription');
-  dialog.innerHTML = `<header class="tutorial-header"><div><h2 id="tutorialTitle">Welcome to FLAIR Review Studio</h2><p id="tutorialDescription">A quick guide to reviewing images, rating cases, and saving your work.</p></div><button type="button" class="tutorial-skip" id="tutorialSkip">Skip tutorial</button></header><video id="tutorialVideo" class="tutorial-video" controls playsinline preload="metadata" poster="assets/tutorial/overview-poster.png" aria-label="FLAIR Review Studio overview with English narration"><track kind="captions" srclang="en" label="English" src="assets/tutorial/overview-en.vtt"></video><footer class="tutorial-footer"><p id="tutorialPlaybackHint" aria-live="polite">English narration. Select Start tutorial to hear the guide.</p><button type="button" class="tutorial-play" id="tutorialPlay" autofocus>Start tutorial</button></footer>`;
+  dialog.innerHTML = `<header class="tutorial-header"><div><h2 id="tutorialTitle">Welcome to FLAIR Review Studio</h2><p id="tutorialDescription">A quick guide to reviewing images, rating cases, and saving your work.</p></div><button type="button" class="tutorial-skip" id="tutorialSkip">Skip tutorial</button></header><video id="tutorialVideo" class="tutorial-video" controls playsinline preload="metadata" poster="assets/tutorial/overview-poster.png?v=no-csv-1" aria-label="FLAIR Review Studio overview with English narration"><track kind="captions" srclang="en" label="English" src="assets/tutorial/overview-en.vtt?v=no-csv-1"></video><footer class="tutorial-footer"><p id="tutorialPlaybackHint" aria-live="polite">English narration. Select Start tutorial to hear the guide.</p><button type="button" class="tutorial-play" id="tutorialPlay" autofocus>Start tutorial</button></footer>`;
   document.body.appendChild(dialog);
   const video = document.getElementById('tutorialVideo');
   const play = document.getElementById('tutorialPlay');
@@ -31,7 +31,7 @@
   function openTutorial() {
     if (dialog.open) return;
     returnFocus = document.activeElement;
-    if (!video.getAttribute('src')) video.src = 'assets/tutorial/overview-en.mp4';
+    if (!video.getAttribute('src')) video.src = 'assets/tutorial/overview-en.mp4?v=no-csv-1';
     video.currentTime = 0;
     play.textContent = 'Start tutorial';
     hint.textContent = 'English narration. Select Start tutorial to hear the guide.';

@@ -70,7 +70,7 @@ body { background:radial-gradient(ellipse at 82% -8%,rgba(50,103,170,.19),transp
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }</style>
 <script src="./review-config.js"></script>
 <link rel="stylesheet" href="./tutorial.css">
-<script defer src="./tutorial.js"></script>
+<script defer src="./tutorial.js?v=no-csv-1"></script>
 </head><body>
 <title>FLAIR Case Review Studio — Pro</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -407,7 +407,6 @@ dialog::backdrop { background: rgba(0,0,0,.88); }
       <button aria-pressed="false" data-f="RATED">Rated</button>
       <button aria-pressed="false" data-f="PENDING">Not rated</button>
     </div>
-    <button class="btn-solid" id="csv">Download CSV</button>
   </div>
   <div class="section-label">Reviewers · the filter uses your own decisions</div>
   <div class="reviewers" id="reviewers"></div>
@@ -687,7 +686,7 @@ function buildStatic() {
     b.addEventListener("click", () => go(i));
     g.appendChild(b);
   });
-  // Reviewer name + export controls live in the notice bar.
+  // Reviewer name + finish controls live in the notice bar.
   const n = $("notice"); n.dataset.mode = "shared"; n.innerHTML = "";
   n.style.flexWrap = "wrap"; n.style.alignItems = "center";
   const dot = document.createElement("span"); dot.className = "dot";
@@ -701,9 +700,9 @@ function buildStatic() {
   });
   const txt = document.createElement("span"); txt.id = "finishText";
   txt.textContent = SHEET_URL
-    ? "Ratings are saved here and sent to the shared results sheet. Finish downloads a CSV copy."
-    : "Local-only until the results sheet is configured. Finish downloads a CSV copy.";
-  const btn = document.createElement("button"); btn.className = "btn-solid"; btn.id = "finish"; btn.textContent = "Finish & download CSV";
+    ? "Ratings are saved here and sent to the shared results sheet. Select Finish review when you are done."
+    : "Ratings are saved in this browser. The shared results sheet is not configured.";
+  const btn = document.createElement("button"); btn.className = "btn-solid"; btn.id = "finish"; btn.textContent = "Finish review";
   btn.style.marginLeft = "auto"; btn.addEventListener("click", finish);
   const nameHint = document.createElement("span"); nameHint.id = "reviewerStatus";
   n.append(dot, lab, inp, nameHint, txt, btn);
@@ -862,7 +861,7 @@ function persist(caseId) {
 function decide(score) {
   if (!ensureReviewerName()) return;
   if (!Number.isInteger(score) || score < 1 || score > 10) return;
-  if (finishArmed) { finishArmed = false; $("finish").textContent = "Finish & download CSV"; }
+  if (finishArmed) { finishArmed = false; $("finish").textContent = "Finish review"; }
   const c = CASES[current], prev = mine[c.id];
   if (prev && Number(prev.decision) === score) return;
   mine[c.id] = { decision: score, note: $("noteInput").value.trim(), at: new Date().toISOString() };
@@ -930,7 +929,7 @@ function commitNoteIfChanged(forceSend = false, caseId = CASES[current].id) {
   return sendToSheet(caseId);
 }
 
-/* ---------- navigation and export ---------- */
+/* ---------- navigation and finishing ---------- */
 function go(i) {
   commitNoteIfChanged();
   current = Math.max(0, Math.min(CASES.length - 1, i));
@@ -943,28 +942,7 @@ function nextPendingFrom(i) {
   return Math.min(i + 1, CASES.length - 1);
 }
 
-function csvText() {
-  const q = s => '"' + String(s == null ? "" : s).replace(/"/g, '""') + '"';
-  const lines = ["case_number,case_id,reviewer,rating_1_to_10,note,rated_at"];
-  CASES.forEach((c, i) => { const r = mine[c.id] || {}; lines.push([i + 1, c.id, q(reviewer || "You"), r.decision || "", q(r.note), r.at || ""].join(",")); });
-  return lines.join("\r\n") + "\r\n";
-}
-function downloadCsv() {
-  if (!ensureReviewerName()) return "";
-  commitNoteIfChanged();
-  const safe = (reviewer || "reviewer").replace(/[^A-Za-z0-9_-]+/g, "_");
-  const day = new Date().toISOString().slice(0, 10);
-  const name = "review_results_" + safe + "_" + day + ".csv";
-  const blob = new Blob(["﻿" + csvText()], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  return name;
-}
-
-// Finish: save, then download the final CSV. With cases still pending, the first click
-// says how many and the second click finishes anyway.
+// Finish saves and submits results. Pending cases require a second click.
 let finishArmed = false;
 async function finish() {
   if (!ensureReviewerName()) return;
@@ -974,12 +952,11 @@ async function finish() {
   if (pending && !finishArmed) {
     finishArmed = true;
     $("finish").textContent = "Finish anyway (" + pending + " pending)";
-    $("finishText").textContent = pending + " of " + CASES.length + " cases are not rated yet. Click again to download now, or keep reviewing.";
+    $("finishText").textContent = pending + " of " + CASES.length + " cases are not rated yet. Click again to finish now, or keep reviewing.";
     return;
   }
   finishArmed = false;
   saveLocal();
-  const file = downloadCsv();
   let delivery = "Ratings are saved in this browser.";
   if (SHEET_URL) {
     const results = CASES.filter(c => mine[c.id] && (mine[c.id].decision || mine[c.id].note));
@@ -991,13 +968,13 @@ async function finish() {
       $("finishText").textContent = "Sending results " + Math.min(offset + batch.length, results.length) + " / " + results.length + "…";
     }
     delivery = failures
-      ? failures + " result(s) were not confirmed by the sheet; check the status above and keep the CSV backup."
+      ? failures + " result(s) were not confirmed by the sheet; your results remain saved in this browser. Check the connection and select Finish review to retry."
       : results.length + " result(s) were confirmed by Google Sheets. Check the Review Results tab.";
   }
-  $("finish").textContent = "Download CSV again";
-  $("finishText").textContent = "Finished. " + file + ". " + delivery;
+  $("finish").textContent = "Finish review";
+  $("finishText").textContent = "Finished. " + delivery;
   $("notice").dataset.mode = "shared";
-  toast("Saved and downloaded " + file);
+  toast("Review finished");
 }
 
 function show(v) {
@@ -1041,7 +1018,6 @@ $("noteInput").addEventListener("blur", commitNoteIfChanged);
 document.querySelectorAll(".annotation-chip").forEach(button => button.addEventListener("click", () => insertNoteTemplate(button.dataset.template)));
 $("tabReview").addEventListener("click", () => show("review"));
 $("tabSummary").addEventListener("click", () => show("summary"));
-$("csv").addEventListener("click", () => { if (ensureReviewerName()) toast("Downloaded " + downloadCsv()); });
 $("zoomClose").addEventListener("click", () => $("zoom").close());
 $("zoom").addEventListener("click", e => { if (e.target === $("zoom")) $("zoom").close(); });
 $("filter").addEventListener("click", e => {
