@@ -48,5 +48,8 @@
     if (focusTarget) focusTarget.focus();
   });
   replay.addEventListener('click', openTutorial);
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) openTutorial();
+  });
   openTutorial();
 })();

@@ -70,7 +70,6 @@ body { background:radial-gradient(ellipse at 82% -8%,rgba(50,103,170,.19),transp
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }</style>
 <script src="./review-config.js"></script>
 <link rel="stylesheet" href="./tutorial.css">
-<script defer src="./tutorial.js?v=every-visit-1"></script>
 </head><body>
 <title>FLAIR Case Review Studio — Pro</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1300,4 +1299,62 @@ body { color:var(--text); background-color:var(--bg); background-image:radial-gr
 @media(max-width:700px){.notice[data-mode=shared] #reviewerName{width:100%!important;flex:1 1 100%}.notice[data-mode=shared] #finish{margin-left:0!important;flex:1 1 100%}.studio-shell{padding:12px}.film-head-actions{width:100%;justify-content:space-between}#films{grid-template-columns:1fr!important}#films .film{height:clamp(280px,72vw,450px)}#films figcaption{grid-template-columns:auto 1fr auto}.film-actions{grid-column:3;grid-row:1/3}.preset-tip{margin-left:0}.compare-grid{grid-template-columns:1fr}.compare-panel img{height:46vh}.comparison-dialog-head{padding:12px;}.compare-footer{padding:12px}}
 @media(prefers-reduced-motion:reduce){#films figure{transition:none}}
 </style>
+<script id="tutorial-bootstrap">
+(() => {
+  'use strict';
+  const dialog = document.createElement('dialog');
+  dialog.id = 'onboardingTutorial';
+  dialog.setAttribute('aria-labelledby', 'tutorialTitle');
+  dialog.setAttribute('aria-describedby', 'tutorialDescription');
+  dialog.innerHTML = `<header class="tutorial-header"><div><h2 id="tutorialTitle">Welcome to FLAIR Review Studio</h2><p id="tutorialDescription">A quick guide to reviewing images, rating cases, and saving your work.</p></div><button type="button" class="tutorial-skip" id="tutorialSkip">Skip tutorial</button></header><video id="tutorialVideo" class="tutorial-video" controls playsinline preload="metadata" poster="assets/tutorial/overview-poster.png?v=no-csv-1" aria-label="FLAIR Review Studio overview with English narration"><track kind="captions" srclang="en" label="English" src="assets/tutorial/overview-en.vtt?v=no-csv-1"></video><footer class="tutorial-footer"><p id="tutorialPlaybackHint" aria-live="polite">English narration. Select Start tutorial to hear the guide.</p><button type="button" class="tutorial-play" id="tutorialPlay" autofocus>Start tutorial</button></footer>`;
+  document.body.appendChild(dialog);
+  const video = document.getElementById('tutorialVideo');
+  const play = document.getElementById('tutorialPlay');
+  const hint = document.getElementById('tutorialPlaybackHint');
+  const replay = document.createElement('button');
+  replay.type = 'button'; replay.id = 'tutorialReplay'; replay.className = 'btn-ghost';
+  replay.textContent = 'Watch tutorial';
+  // Keep replay available beside the reviewer identity and finishing controls.
+  document.getElementById('notice').appendChild(replay);
+  let returnFocus = null;
+  function dismiss() {
+    if (dialog.open) dialog.close();
+  }
+  function openTutorial() {
+    if (dialog.open) return;
+    returnFocus = document.activeElement;
+    if (!video.getAttribute('src')) video.src = 'assets/tutorial/overview-en.mp4?v=no-csv-1';
+    video.currentTime = 0;
+    play.textContent = 'Start tutorial';
+    hint.textContent = 'English narration. Select Start tutorial to hear the guide.';
+    dialog.showModal();
+    video.play().catch(() => { /* Browsers may require a click before playing narration. */ });
+  }
+  play.addEventListener('click', () => {
+    if (video.paused) video.play().catch(() => {
+      hint.textContent = 'The video could not start. Try the video controls, or skip to begin reviewing.';
+    });
+    else video.pause();
+  });
+  video.addEventListener('play', () => {
+    play.textContent = 'Pause tutorial'; hint.textContent = 'You can skip at any time and replay the guide later.';
+  });
+  video.addEventListener('pause', () => { play.textContent = 'Continue tutorial'; });
+  video.addEventListener('ended', dismiss);
+  video.addEventListener('error', () => { hint.textContent = 'The tutorial is unavailable. Select Skip tutorial to start reviewing.'; });
+  document.getElementById('tutorialSkip').addEventListener('click', dismiss);
+  dialog.addEventListener('cancel', event => { event.preventDefault(); dismiss(); });
+  dialog.addEventListener('close', () => {
+    video.pause();
+    const focusTarget = returnFocus === replay ? replay : document.getElementById('reviewerName');
+    if (focusTarget) focusTarget.focus();
+  });
+  replay.addEventListener('click', openTutorial);
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) openTutorial();
+  });
+  openTutorial();
+})();
+
+</script>
 </body></html>
